@@ -26,11 +26,26 @@
  * design decision: (0,0) at bottom left
  */
 
-const int xSize = 50;
+const int xSize = 50;   //size of map, subject to change
 const int ySize = 30;
 
+enum class Action { //more readable
+    north,
+    south,
+    west,
+    east,
+    northwest,
+    northeast,
+    southwest,
+    southeast
+};
 
-struct coord{
+
+std::vector<Action>* stateTree;    //this vector, living on heap, holds all possible actions for pathFinder
+                                //it must be on heap as the tree could be huge
+
+
+struct coord{   //this is just more readable than pair
     float x;
     float y;
 };
@@ -56,6 +71,7 @@ float heuristic(coord pos1, coord pos2) {
  */
 class pathFinder{   //this is our pathfinder
 public: //yeah I public everything
+    std::vector<Action> path;   //this is the completed, optimized path
 
 };
 
@@ -66,6 +82,6 @@ public: //yeah I public everything
  */
 void initialize(){
 
-    std::vector<int>* vec_ptr = new std::vector<int>();
+    stateTree = new std::vector<Action>();
 
 }
