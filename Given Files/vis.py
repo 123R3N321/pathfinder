@@ -7,8 +7,8 @@ def plot_maze(file_path):
     try:
         # Load the maze from the .txt file
         with open(file_path, "r") as file:
-            
-            maze = np.loadtxt(file_path, delimiter=" ", usecols=range(50),skiprows=1)
+            lines =(line for line in file if len(line) >= 101)
+            maze = np.loadtxt(lines, delimiter=" ", usecols=range(50))
 
         # Initialize the plot
         fig, ax = plt.subplots(figsize=(12, 7))
