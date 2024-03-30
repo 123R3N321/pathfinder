@@ -20,6 +20,7 @@
 #include<queue>
 
 #define LOG(argument) std::cout << argument << '\n' //convenient debugg
+float infinity = std::numeric_limits<float>::infinity();
 
 /*
  * design decision: (0,0) at bottom left
@@ -43,6 +44,8 @@ std::vector<Node*> allNodes;    //this is a global var, all its elements on heap
 
 std::vector<Action> actionTree;  //same as above
 
+float cardinalCost = 1.0f,
+        diagonalCost = 1.4142f;
 
 enum class Action { //more readable
     north,
@@ -60,12 +63,13 @@ struct Node{   //this is just more readable than pair,
             // btw we calculate heuristic on spot, we can change to init to save calculation time, as a design choice
     float x;
     float y;
+    float cost; //essentially the type of the node, a wall or a tile
     Action parent;  //know what action brought us here.
     float pathCost;
     bool reached;   //if reached, we will not explore it in AllNodes
     float heuristicVal;
 
-    Node(float x=0.0f, float y=0.0f) :
+    Node(float x=0.0f, float y=0.0f, float cost = 0.0f) :
     x(x), y(y), pathCost(0), reached(false){
         heuristicVal = heuristic(this);
     }    //default value 0,0
@@ -74,6 +78,7 @@ struct Node{   //this is just more readable than pair,
     Node(const Node& other){
         x = other.x;
         y = other.y;
+        cost = other.cost;
         parent = other.parent;
         pathCost = other.pathCost;
         reached = other.reached;
@@ -84,6 +89,7 @@ struct Node{   //this is just more readable than pair,
         if (this != &other) { // Check for self-assignment
             x = other.x;
             y = other.y;
+            cost = other.cost;
             parent = other.parent;
             pathCost = other.pathCost;
             reached = other.reached;
@@ -136,7 +142,7 @@ float heuristic(const Node* curPos) {
  * where a <= xSize-1, b<= ySize - 1, total ind goes to xSize * ySize - 1 which is good
  * This provides const time access.
  */
-void initialize(){  //create all nodes on heap
+void initialize(){  //create all nodes on heap, they all start with zero cost
     for(size_t i=0;i<xSize; ++i){
         for(size_t j=0;j<ySize;++j){
             allNodes.push_back(new Node(i,j));  //at initialization step, each node already knows their heuristic
@@ -144,7 +150,103 @@ void initialize(){  //create all nodes on heap
     }
 }
 
+float addCost(Action action){
+    switch(action){
+        case Action::north:
+        case Action::east:
+        case Action::south:
+        case Action::west:
+            return cardinalCost;
+            break;
 
+        case Action::northeast:
+        case Action::southeast:
+        case Action::southwest:
+        case Action::northwest:
+            return diagonalCost; //using the diagonal cost given by
+            break;
+
+    }
+}
+
+
+Node* getNodeFrom(Node* node, Action action){
+    Node* ptr = nullptr;    //later we return this ptr with updated value
+    int refVal = ySize * (node->x) + (node->y);
+    switch (action){
+        case Action::north:
+            ptr = allNodes[refVal + 1];  //because of the way we initialize the map, we do algebra like this.
+            break;
+
+        case Action::northeast:
+            ptr = allNodes[refVal + ySize + 1];
+            break;
+
+        case Action::east:
+            ptr = allNodes[refVal + ySize];
+            break;
+
+        case Action::southeast:
+            ptr = allNodes[refVal + ySize - 1];
+            break;
+
+        case Action::south:
+            ptr = allNodes[refVal - 1];
+            break;
+
+        case Action::southwest:
+            ptr = allNodes[refVal - ySize - 1];
+            break;
+
+        case Action::west:
+            ptr = allNodes[refVal -ySize];
+            break;
+
+        case Action::northwest:
+            ptr = allNodes[refVal - ySize + 1];
+            break;
+    }
+    return ptr;
+}
+
+void setNode(size_t x, size_t y, float cost=infinity){ //modify a node (in particular its cost) inside allNodes
+    if(allNodes.size()<=ySize * x + y){ //most likely forgor to initilize()
+        LOG("the node exceeded the map."); return;
+    }
+    allNodes[ySize * x + y]->cost = cost;
+}
+
+/**
+ *  first, check all reachable nodes and put in a vector
+ *  at this point we assume diagona not blocked yet
+ *  second, check each of these reachable ones, do labeling for reached and update parental info
+ *
+ * @return a vector with pointers to the neighboring nodes
+ */
+std::vector<Node*> probe(Node* node){
+    bool north = false;
+    bool east = false;
+    bool south = false;
+    bool west = false;
+
+    std::vector<Node*> lst;
+    //check all 4 basic adjacent candidates
+    if(node->y<(ySize-1)){lst.push_back(getNodeFrom(node, Action::north));}
+    if(node->x<(xSize-1)){lst.push_back(getNodeFrom(node, Action::east));}
+    if(node->y>0){lst.push_back(getNodeFrom(node, Action::south));}
+    if(node->x>0){lst.push_back(getNodeFrom(node, Action::west));}
+
+    if(node->y<(ySize-1) && node->x<(xSize-1)){lst.push_back(getNodeFrom(node, Action::northeast));}
+    if(node->y>0 && node->x<(xSize-1)){lst.push_back(getNodeFrom(node, Action::southeast));}
+    if(node->y>0 && node->x>0){lst.push_back(getNodeFrom(node, Action::southwest));}
+    if(node->y<(ySize-1) && node->x>0){lst.push_back(getNodeFrom(node, Action::northwest));}
+    //then check the very weird diagonal situation when we actually expand
+    for(Node* each : lst){
+        if(each->reached){
+
+        }
+    }
+}
 
 
 
@@ -154,9 +256,9 @@ void aStar(std::vector<Node*> map){ //only need the map. we have global start an
     while(frontier.size()>0 && curIteration < maxIteration){
         curIteration ++;
 
-        Node current = *(frontier.top());   //create a local shallow copy, not so costly as it is a single node
+        Node* current = frontier.top();   //create a local shallow copy of a pointer, very cheap
         frontier.pop(); //only kicked out from frontier, the node is still in our worldly worldly map lol
-        if(current.isEnd()){
+        if(current->isEnd()){
             return; //we do not need to do anything
         }
         for ...
