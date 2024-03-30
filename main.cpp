@@ -7,20 +7,11 @@
 */
 
 /**
-* General approach: big probelm: we cannot get pass a "corner block"
- * create 2 stages: calculate the path (i want it to be visible)
- *                 and take the path (optimal) (ofc also visualized)
- *
- *
- * In path probing stage we need to be able to be corner-blocked.
-*/
-
-/**
- * areas of design choice/ future optimization
- *  .introduce weight for astar
- *  .calculate heuristic for each coord
- *  .implement a datastructure for 8-elem-heap. (this one is prolly the most important)
+ * General algo design:
+ * mimic my old work in python
+ * need dynamically allocate nodes this time.
  */
+
 #include <iostream>
 #include<vector>
 #include<string>
@@ -33,6 +24,10 @@
 /*
  * design decision: (0,0) at bottom left
  */
+//all declarations
+struct Node;
+float heuristic(const Node* curPos);
+enum class Action;
 
 const size_t   xSize = 50,   //size of map, subject to change, also safer to have size_t
             ySize = 30;
@@ -42,6 +37,12 @@ const float initX = 0.0f,   //where do we start
 
 const float endX = 49.0f,   //where to we end
             endY = 29.0f;
+const size_t maxIteration = 9999;   //stop if we spend too long
+
+std::vector<Node*> allNodes;    //this is a global var, all its elements on heap, my implementation makes access faster than RBtree map.
+
+std::vector<Action> actionTree;  //same as above
+
 
 enum class Action { //more readable
     north,
@@ -54,108 +55,139 @@ enum class Action { //more readable
     southeast
 };
 
-//below is the ONLY thing living on heap
-std::vector<Action>* stateTree;    //this vector, living on heap, holds all possible actions for pathFinder
-                                //it must be on heap as the tree could be huge
 
-
-struct coord{   //this is just more readable than pair,
+struct Node{   //this is just more readable than pair,
             // btw we calculate heuristic on spot, we can change to init to save calculation time, as a design choice
     float x;
     float y;
     Action parent;  //know what action brought us here.
+    float pathCost;
+    bool reached;   //if reached, we will not explore it in AllNodes
+    float heuristicVal;
 
-    coord(float x=0.0f, float y=0.0f) : x(x), y(y){}    //default value 0,0
+    Node(float x=0.0f, float y=0.0f) :
+    x(x), y(y), pathCost(0), reached(false){
+        heuristicVal = heuristic(this);
+    }    //default value 0,0
 
-    coord& operator=(const coord& other){
+    //copy constructor
+    Node(const Node& other){
+        x = other.x;
+        y = other.y;
+        parent = other.parent;
+        pathCost = other.pathCost;
+        reached = other.reached;
+        heuristicVal = other.heuristicVal;
+    }
+
+    Node& operator=(const Node& other){ //assignment
         if (this != &other) { // Check for self-assignment
             x = other.x;
             y = other.y;
             parent = other.parent;
+            pathCost = other.pathCost;
+            reached = other.reached;
+            heuristicVal = other.heuristicVal;
         }
         return *this;
     }
+
+
+
+    bool isStart(){
+        return initX==x && initY==y;
+    }
+
+    bool isEnd(){   //we actually don need this as heuristic will be 0.
+        return endX==x && endY==y;
+    }
 };
 
-coord start(initX, initY);  //start and ending point in coord form, uninitialized parent action.
-coord end(endX, endY);
 
+
+struct compFunctor{
+    bool operator()(const Node* a, const Node* b) const {
+        // Implement your comparison logic here
+        // For example, comparing path costs of the nodes
+        return a->pathCost+ heuristic(a) > b->pathCost + heuristic(b); // Change this as needed
+    }
+};
+
+
+std::priority_queue<Node*, std::vector<Node*>, compFunctor> frontier; //It simply points to those nodes in allNodes, we do not have memory issue
+//do NOT attempt to delete from frontier as it will literally be double delete!
 
 
 /**
  * Tentatively, use float for precision (also honor cs3113)
  *
 
- * @param pos1      //coordinate 1
- * @param pos2      //coordinate 2
+ * @param curPos      //curent position
  * @return euclidean distance, float
  */
-float heuristic(coord pos1, coord pos2) {
-    return sqrt(pow(pos2.x - pos1.x, 2) + pow(pos2.y - pos2.y, 2));
+float heuristic(const Node* curPos) {
+    return sqrt(pow(endX - curPos->x, 2) + pow(endY - curPos->y, 2));
+}
+
+
+/**
+ * The soul of my design optimization
+ * Node with coord (a,b) has ind pos [a*ySize + b]
+ * where a <= xSize-1, b<= ySize - 1, total ind goes to xSize * ySize - 1 which is good
+ * This provides const time access.
+ */
+void initialize(){  //create all nodes on heap
+    for(size_t i=0;i<xSize; ++i){
+        for(size_t j=0;j<ySize;++j){
+            allNodes.push_back(new Node(i,j));  //at initialization step, each node already knows their heuristic
+        }
+    }
 }
 
 
 
 
-/**
- * This is our player class.
- */
-class pathFinder{   //this is our pathfinder
-public: //yeah I public everything
 
-    static float pathCost;  //static makes it accessible without class created, to bypass cpp restrictions
-    static coord curPos;   //current position
+void aStar(std::vector<Node*> map){ //only need the map. we have global start and end point
+    frontier.push(map[ySize*initX + initY]);    //the math approach gives constant access.
+    size_t curIteration = 0;    //to be compared with maxIteration
+    while(frontier.size()>0 && curIteration < maxIteration){
+        curIteration ++;
 
-    /**
-     * a generic name because we indeed only use it as a simple functor for min heap support
-     */
-    struct Functor {
-
-        float value; //
-
-        Functor() {
-            value = pathCost + heuristic(curPos, end);
+        Node current = *(frontier.top());   //create a local shallow copy, not so costly as it is a single node
+        frontier.pop(); //only kicked out from frontier, the node is still in our worldly worldly map lol
+        if(current.isEnd()){
+            return; //we do not need to do anything
         }
-
-        // Overload comparison operator for min heap
-        bool operator>(const Functor& other) const {
-            // Define comparison logic here
-            return value > other.value;
-        }
-    };
-
-    std::vector<Action> path;   //this is the completed, optimized path
-    std::priority_queue<Action, std::vector<Action>, std::greater<Functor>> actions;    //we use customized greater op.
-
-    //constructor, default spawn at (0,0), can be anywhere, assume user will not pass in nonsense position
-    pathFinder(){   //more readable not in init.lst
-        curPos = start;
-        pathCost = 0;   //initialize to be zero
-        //at this point there is no action before starting point
-    }
-
-    void reset(){   //reset everything. all global params serve our pathFinder
-        curPos = start;
-        pathCost = 0;
-        stateTree->clear(); //we need to re-calculate stateTree
-        path.clear();   //ofc we start from scratch
-    }
-
-    void astar(){   //start and end globally defined. we do not take parameters
-                    //maybe add weight as global param in the future.
+        for ...
 
     }
+}
 
-};
+int main(){
+//    foo* foo1 = new foo;
+//    foo* foo2 = new foo;
+//    foo1->val +=1.0f;
 
+//LOG(foo2.val);
 
+//    std::priority_queue<foo*, std::vector<foo*>, Functor> fooheap;
+//    fooheap.push(foo2);
+//
+//    fooheap.push(foo1);
+//    LOG(fooheap.top()->val);
+//    delete foo1;
+//    delete foo2;
 
+    initialize();   //creates game map with all nodes
+    frontier.push(allNodes[0]);
+    frontier.push(allNodes[800]);
+    frontier.push(allNodes[2]);
+    frontier.push(allNodes[47]);
+    //          (ind / sizeY, ind % sizeY)
+    LOG(allNodes[ySize*initX + initY]->y);
 
-/**
- * a vector on heap that holds all possible states, it does not belong to path finder (pathfinder lives on stack)
- */
-void initialize(){
-
-    stateTree = new std::vector<Action>();
-
+//handle all deletes, no memory leak.
+    for(Node* each : allNodes){delete each;}
+    return 0;
 }
