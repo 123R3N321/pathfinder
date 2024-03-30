@@ -21,6 +21,7 @@
 
 #define LOG(argument) std::cout << argument << '\n' //convenient debugg
 float infinity = std::numeric_limits<float>::infinity();
+float criticalCritirion = 999.0f;
 
 /*
  * design decision: (0,0) at bottom left
@@ -231,18 +232,40 @@ std::vector<Node*> probe(Node* node){
 
     std::vector<Node*> lst;
     //check all 4 basic adjacent candidates
-    if(node->y<(ySize-1)){lst.push_back(getNodeFrom(node, Action::north));}
-    if(node->x<(xSize-1)){lst.push_back(getNodeFrom(node, Action::east));}
-    if(node->y>0){lst.push_back(getNodeFrom(node, Action::south));}
-    if(node->x>0){lst.push_back(getNodeFrom(node, Action::west));}
+    if(node->y<(ySize-1)){
+        lst.push_back(getNodeFrom(node, Action::north));
+        if((getNodeFrom(node,Action::north)->cost)<criticalCritirion){
+            north = true;
+        }
+    }
+    if(node->x<(xSize-1)){
+        lst.push_back(getNodeFrom(node, Action::east));
+        if((getNodeFrom(node,Action::east)->cost)<criticalCritirion){
+            east = true;
+        }
+    }
+    if(node->y>0){
+        lst.push_back(getNodeFrom(node, Action::south));
+        if((getNodeFrom(node,Action::south)->cost)<criticalCritirion){
+            south = true;
+        }
+    }
+    if(node->x>0){
+        lst.push_back(getNodeFrom(node, Action::west));
+        if((getNodeFrom(node,Action::west)->cost)<criticalCritirion){
+            west = true;
+        }
+    }
 
-    if(node->y<(ySize-1) && node->x<(xSize-1)){lst.push_back(getNodeFrom(node, Action::northeast));}
-    if(node->y>0 && node->x<(xSize-1)){lst.push_back(getNodeFrom(node, Action::southeast));}
-    if(node->y>0 && node->x>0){lst.push_back(getNodeFrom(node, Action::southwest));}
-    if(node->y<(ySize-1) && node->x>0){lst.push_back(getNodeFrom(node, Action::northwest));}
+    if(north && east){lst.push_back(getNodeFrom(node, Action::northeast));}
+    if(south && east){lst.push_back(getNodeFrom(node, Action::southeast));}
+    if(south && west){lst.push_back(getNodeFrom(node, Action::southwest));}
+    if(north && west){lst.push_back(getNodeFrom(node, Action::northwest));}
     //then check the very weird diagonal situation when we actually expand
     for(Node* each : lst){
-        if(each->reached){
+        if( ! each->reached){
+
+        }else{  //already reached, potentially choose a better parent
 
         }
     }
