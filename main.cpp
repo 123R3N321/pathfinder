@@ -34,11 +34,11 @@ enum class Action;
 const size_t   xSize = 50,   //size of map, subject to change, also safer to have size_t
             ySize = 30;
 
-const float initX = 0.0f,   //where do we start
+const float initX = 1.0f,   //where do we start
             initY = 0.0f;
 
-const float endX = 49.0f,   //where to we end
-            endY = 29.0f;
+const float endX = 3.0f,   //where to we end
+            endY = 3.0f;
 const size_t maxIteration = 9999;   //stop if we spend too long
 
 std::vector<Node*> allNodes;    //this is a global var, all its elements on heap, my implementation makes access faster than RBtree map.
@@ -73,6 +73,7 @@ struct Node{   //this is just more readable than pair,
     Node(float x=0.0f, float y=0.0f, float cost = 0.0f) :
     x(x), y(y), pathCost(0), reached(false){
         heuristicVal = heuristic(this);
+        parent = nullptr;
     }    //default value 0,0
 
     //copy constructor
@@ -207,6 +208,7 @@ Node* getNodeFrom(Node* node, Action action){
             ptr = allNodes[refVal - ySize + 1];
             break;
     }
+    ptr->cost = addCost(action);    //so we don need to add one by one in the future
     return ptr;
 }
 
@@ -233,51 +235,56 @@ std::vector<Node*> probe(Node* node){   //math correct
     std::vector<Node*> lst;
     //check all 4 basic adjacent candidates
     if(node->y<(ySize-1)){
-        getNodeFrom(node, Action::north)->cost = addCost(Action::north);
-        lst.push_back(getNodeFrom(node, Action::north));
+        if(!getNodeFrom(node, Action::north)->reached){
+            lst.push_back(getNodeFrom(node, Action::north));
+        }
         if((getNodeFrom(node,Action::north)->cost)<criticalCritirion){
             north = true;
         }
     }
     if(node->x<(xSize-1)){
-        getNodeFrom(node, Action::east)->cost = addCost(Action::east);
-        lst.push_back(getNodeFrom(node, Action::east));
-        if((getNodeFrom(node,Action::east)->cost)<criticalCritirion){
+        if(!getNodeFrom(node, Action::east)->reached){
+            lst.push_back(getNodeFrom(node, Action::east));
+        }        if((getNodeFrom(node,Action::east)->cost)<criticalCritirion){
             east = true;
         }
     }
     if(node->y>0){
-        getNodeFrom(node, Action::south)->cost = addCost(Action::south);
-        lst.push_back(getNodeFrom(node, Action::south));
-        if((getNodeFrom(node,Action::south)->cost)<criticalCritirion){
+        if(!getNodeFrom(node, Action::south)->reached){
+            lst.push_back(getNodeFrom(node, Action::south));
+        }        if((getNodeFrom(node,Action::south)->cost)<criticalCritirion){
             south = true;
         }
     }
     if(node->x>0){
-        getNodeFrom(node, Action::west)->cost = addCost(Action::west);
-        lst.push_back(getNodeFrom(node, Action::west));
-        if((getNodeFrom(node,Action::west)->cost)<criticalCritirion){
+        if(!getNodeFrom(node, Action::west)->reached){
+            lst.push_back(getNodeFrom(node, Action::west));
+        }        if((getNodeFrom(node,Action::west)->cost)<criticalCritirion){
             west = true;
         }
     }
 
     if(north && east){
-        getNodeFrom(node, Action::northeast)->cost = addCost(Action::northeast);
-        lst.push_back(getNodeFrom(node, Action::northeast));
+        if(!getNodeFrom(node, Action::northeast)->reached){
+            lst.push_back(getNodeFrom(node, Action::northeast));
+        }
     }
     if(south && east){
-        getNodeFrom(node, Action::southeast)->cost = addCost(Action::southeast);
-        lst.push_back(getNodeFrom(node, Action::southeast));
+        if(!getNodeFrom(node, Action::southeast)->reached){
+            lst.push_back(getNodeFrom(node, Action::southeast));
+        }
     }
     if(south && west){
-        getNodeFrom(node, Action::southwest)->cost = addCost(Action::southwest);
-        lst.push_back(getNodeFrom(node, Action::southwest));
+        if(!getNodeFrom(node, Action::southwest)->reached){
+            lst.push_back(getNodeFrom(node, Action::southwest));
+        }
     }
     if(north && west){
-        getNodeFrom(node, Action::northwest)->cost = addCost(Action::northwest);
-        lst.push_back(getNodeFrom(node, Action::northwest));
+        if(!getNodeFrom(node, Action::northwest)->reached){
+            lst.push_back(getNodeFrom(node, Action::northwest));
+        }
     }
-    //then check the very weird diagonal situation when we actually expand
+
     for(Node* child : lst){
         if( ! child->reached){
             child->parent = node;    //first time seeing this child, adopt by parent
@@ -296,6 +303,7 @@ std::vector<Node*> probe(Node* node){   //math correct
 
 
 void aStar(std::vector<Node*> map){ //only need the map. we have global start and end point
+    map[ySize*initX + initY]->reached = true;   //prolly not necessary
     frontier.push(map[ySize*initX + initY]);    //the math approach gives constant access.
     size_t curIteration = 0;    //to be compared with maxIteration
     while(frontier.size()>0 && curIteration < maxIteration){
@@ -306,8 +314,8 @@ void aStar(std::vector<Node*> map){ //only need the map. we have global start an
         if(current->isEnd()){
             return; //we do not need to do anything
         }
-
-        for (Node* child : probe(current)){
+        std::vector<Node*>cand = probe(current);
+        for (Node* child : cand){
             if (! child->reached){
                 child->parent = current;
                 child->reached = true;
@@ -336,24 +344,52 @@ int main(){
 
     aStar(allNodes);    //assume frontier is clean
 
+
+    /**
+     * actual path test, failed
+     */
+    Node* backtrack = allNodes[ySize * endX + endY];    //this is end node
+        while(! backtrack->isStart()){
+        LOG(backtrack->x<<" "<<backtrack->y);
+        backtrack = backtrack->parent;
+    }
+    LOG(backtrack->x<<" "<<backtrack->y);
+
+
+//for(Node* each : allNodes){
+//    if(each->reached){
+//        LOG(each->x<<" "<<each->y);
+//    }
+//}
+
+
 //    frontier.push(allNodes[0]);
 //    frontier.push(allNodes[1]);
 //    frontier.push(allNodes[2]);
 //
-//    frontier.push(allNodes[3]);
+//    frontier.push(allNodes[31]);
 //    frontier.push(allNodes[3]);
 //    frontier.push(allNodes[3]);
 //
 //    frontier.push(allNodes[3]);
 //    frontier.push(allNodes[3]);
 //    frontier.push(allNodes[3]);
-
+//LOG(frontier.top()->x<<" "<<frontier.top()->y);
 
     //              (ind / sizeY, ind % sizeY)
+
+/**
+ * probe test, checked
+ */
+
 //    Node* startCopy = allNodes[31];//this shld be coord (1,1), checked
 //    for(auto each : probe(startCopy)){
-//        LOG(each->x);
+//        LOG(each->x <<  " " << each->y );
 //    }
+
+/**
+ * linAlg test, checked
+ */
 //    LOG(probe(startCopy).size());
 //    Node*northCopy = getNodeFrom(startCopy,Action::north);  //(1,2) checked.
 //    Node*eastCopy = getNodeFrom(startCopy,Action::east);  //(2,1) checked
@@ -367,13 +403,13 @@ int main(){
 //    LOG(northwestCopy->y);
 
 
-Node*looper = allNodes[0];
-for(int i=0; i<10;i++){
-    LOG(looper->x);
-    LOG(looper->y);
-    LOG("");
-    looper = looper->parent;
-}
+//Node*looper = allNodes[0];
+//for(int i=0; i<33;i++){
+////    LOG(looper->x);
+//    LOG(allNodes[i]->heuristicVal);
+//    LOG("");
+////    looper = looper->parent;
+//}
 
 
 
