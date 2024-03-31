@@ -224,7 +224,7 @@ void setNode(size_t x, size_t y, float cost=infinity){ //modify a node (in parti
  *
  * @return a vector with pointers to the neighboring nodes
  */
-std::vector<Node*> probe(Node* node){
+std::vector<Node*> probe(Node* node){   //math correct
     bool north = false;
     bool east = false;
     bool south = false;
@@ -290,6 +290,7 @@ std::vector<Node*> probe(Node* node){
             }
         }
     }
+    return lst;
 }
 
 
@@ -333,32 +334,39 @@ int main(){
 
     initialize();   //creates game map with all nodes
 
-//    aStar(allNodes);    //assume frontier is clean
+    aStar(allNodes);    //assume frontier is clean
 
-    frontier.push(allNodes[0]);
-    frontier.push(allNodes[1]);
-    frontier.push(allNodes[2]);
-
-    frontier.push(allNodes[3]);
-    frontier.push(allNodes[3]);
-    frontier.push(allNodes[3]);
-
-    frontier.push(allNodes[3]);
-    frontier.push(allNodes[3]);
-    frontier.push(allNodes[3]);
+//    frontier.push(allNodes[0]);
+//    frontier.push(allNodes[1]);
+//    frontier.push(allNodes[2]);
+//
+//    frontier.push(allNodes[3]);
+//    frontier.push(allNodes[3]);
+//    frontier.push(allNodes[3]);
+//
+//    frontier.push(allNodes[3]);
+//    frontier.push(allNodes[3]);
+//    frontier.push(allNodes[3]);
 
 
 
     //              (ind / sizeY, ind % sizeY)
-    Node* startCopy = allNodes[31];//this shld be coord (1,1), checked
-    Node*northCopy = getNodeFrom(startCopy,Action::north);  //(1,2) checked.
-    Node*eastCopy = getNodeFrom(startCopy,Action::east);  //(2,1) checked
-    Node*southCopy = getNodeFrom(startCopy,Action::south);  //(1,0)
-    Node*westCopy = getNodeFrom(startCopy,Action::west);  //(0,1) checked
+//    Node* startCopy = allNodes[31];//this shld be coord (1,1), checked
+//    for(auto each : probe(startCopy)){
+//        LOG(each->x);
+//    }
+//    LOG(probe(startCopy).size());
 
-    Node*northeastCopy = getNodeFrom(startCopy,Action::northeast);  //(2,2) checked
-    Node*southeastCopy = getNodeFrom(startCopy,Action::southeast);  //(2,0) checked
-    LOG(southeastCopy->y);
+//    Node*northCopy = getNodeFrom(startCopy,Action::north);  //(1,2) checked.
+//    Node*eastCopy = getNodeFrom(startCopy,Action::east);  //(2,1) checked
+//    Node*southCopy = getNodeFrom(startCopy,Action::south);  //(1,0)
+//    Node*westCopy = getNodeFrom(startCopy,Action::west);  //(0,1) checked
+//
+//    Node*northeastCopy = getNodeFrom(startCopy,Action::northeast);  //(2,2) checked
+//    Node*southeastCopy = getNodeFrom(startCopy,Action::southeast);  //(2,0) checked
+//    Node*southwestCopy = getNodeFrom(startCopy,Action::southwest);  //(0,0) checked
+//    Node*northwestCopy = getNodeFrom(startCopy,Action::northwest);  //(0,2) checked
+//    LOG(northwestCopy->y);
 
 //handle all deletes, no memory leak.
     for(Node* each : allNodes){delete each;}
