@@ -341,6 +341,30 @@ void aStar(std::vector<Node*> map){ //only need the map. we have global start an
     }
 }
 
+std::string matchInstruction(Node* cur, Node* prev){
+    std::string msg;
+
+//    if(prev->x == cur->x && prev->y == cur->y-1){msg="up";}
+    if(prev->y == cur->y && prev->x == cur->x-1){msg="right";}else
+    if(prev->x == cur->x && prev->y == cur->y+1){msg="down";}else
+    if(prev->y == cur->y && prev->x == cur->x+1){msg="left";}else
+    if(prev->y == cur->y-1 && prev->x == cur->x-1){msg="top-right";}else
+    if(prev->y == cur->y+1 && prev->x == cur->x-1){msg="bottom-right";}else
+    if(prev->y == cur->y+1 && prev->x == cur->x+1){msg="bottom-left";}else
+    if(prev->y == cur->y-1 && prev->x == cur->x+1){msg="top-left";}else{msg = "up";}
+
+    return msg;
+}
+
+void PrintInstructions(Node* iter){ //recursive implementation to get instruction
+    if(iter->isStart()){
+        return;
+    }
+    PrintInstructions(iter->parent);
+    LOG(matchInstruction(iter,iter->parent));
+
+}
+
 int main(){
 //    foo* foo1 = new foo;
 //    foo* foo2 = new foo;
@@ -360,12 +384,12 @@ int main(){
 
     setNode(1,1);
     setNode(1,2);
-    setNode(2,0);
+//    setNode(2,0);
     setNode(1,3);
     setNode(0,3);
 
     aStar(allNodes);    //assume frontier is clean
-
+    PrintInstructions(allNodes[ySize * endX + endY]);
 
     /**
      * actual path test, failed
