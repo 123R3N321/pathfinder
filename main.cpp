@@ -65,7 +65,7 @@ struct Node{   //this is just more readable than pair,
     float x;
     float y;
     float cost; //essentially the type of the node, a wall or a tile
-    Action parent;  //know what action brought us here.
+    Node* parent;  //know what action brought us here.
     float pathCost;
     bool reached;   //if reached, we will not explore it in AllNodes
     float heuristicVal;
@@ -233,40 +233,61 @@ std::vector<Node*> probe(Node* node){
     std::vector<Node*> lst;
     //check all 4 basic adjacent candidates
     if(node->y<(ySize-1)){
+        getNodeFrom(node, Action::north)->cost = addCost(Action::north);
         lst.push_back(getNodeFrom(node, Action::north));
         if((getNodeFrom(node,Action::north)->cost)<criticalCritirion){
             north = true;
         }
     }
     if(node->x<(xSize-1)){
+        getNodeFrom(node, Action::east)->cost = addCost(Action::east);
         lst.push_back(getNodeFrom(node, Action::east));
         if((getNodeFrom(node,Action::east)->cost)<criticalCritirion){
             east = true;
         }
     }
     if(node->y>0){
+        getNodeFrom(node, Action::south)->cost = addCost(Action::south);
         lst.push_back(getNodeFrom(node, Action::south));
         if((getNodeFrom(node,Action::south)->cost)<criticalCritirion){
             south = true;
         }
     }
     if(node->x>0){
+        getNodeFrom(node, Action::west)->cost = addCost(Action::west);
         lst.push_back(getNodeFrom(node, Action::west));
         if((getNodeFrom(node,Action::west)->cost)<criticalCritirion){
             west = true;
         }
     }
 
-    if(north && east){lst.push_back(getNodeFrom(node, Action::northeast));}
-    if(south && east){lst.push_back(getNodeFrom(node, Action::southeast));}
-    if(south && west){lst.push_back(getNodeFrom(node, Action::southwest));}
-    if(north && west){lst.push_back(getNodeFrom(node, Action::northwest));}
+    if(north && east){
+        getNodeFrom(node, Action::northeast)->cost = addCost(Action::northeast);
+        lst.push_back(getNodeFrom(node, Action::northeast));
+    }
+    if(south && east){
+        getNodeFrom(node, Action::southeast)->cost = addCost(Action::southeast);
+        lst.push_back(getNodeFrom(node, Action::southeast));
+    }
+    if(south && west){
+        getNodeFrom(node, Action::southwest)->cost = addCost(Action::southwest);
+        lst.push_back(getNodeFrom(node, Action::southwest));
+    }
+    if(north && west){
+        getNodeFrom(node, Action::northwest)->cost = addCost(Action::northwest);
+        lst.push_back(getNodeFrom(node, Action::northwest));
+    }
     //then check the very weird diagonal situation when we actually expand
-    for(Node* each : lst){
-        if( ! each->reached){
-
+    for(Node* child : lst){
+        if( ! child->reached){
+            child->parent = node;    //first time seeing this child, adopt by parent
+            child->pathCost = node->pathCost + child->cost;   //first time reaching it, update pathCost
         }else{  //already reached, potentially choose a better parent
-
+            if(child->pathCost < node->pathCost + child->cost){
+                child->parent = node;   //found a better parent
+                child->pathCost = node->pathCost + child->cost; //update this better cost
+                child->reached = false; //fake that we did not have a parent before so that we get a better deal
+            }
         }
     }
 }
@@ -284,8 +305,14 @@ void aStar(std::vector<Node*> map){ //only need the map. we have global start an
         if(current->isEnd()){
             return; //we do not need to do anything
         }
-        for ...
 
+        for (Node* child : probe(current)){
+            if (! child->reached){
+                child->parent = current;
+                child->reached = true;
+                frontier.push(child);
+            }
+        }
     }
 }
 
@@ -305,12 +332,33 @@ int main(){
 //    delete foo2;
 
     initialize();   //creates game map with all nodes
+
+//    aStar(allNodes);    //assume frontier is clean
+
     frontier.push(allNodes[0]);
-    frontier.push(allNodes[800]);
+    frontier.push(allNodes[1]);
     frontier.push(allNodes[2]);
-    frontier.push(allNodes[47]);
-    //          (ind / sizeY, ind % sizeY)
-    LOG(allNodes[ySize*initX + initY]->y);
+
+    frontier.push(allNodes[3]);
+    frontier.push(allNodes[3]);
+    frontier.push(allNodes[3]);
+
+    frontier.push(allNodes[3]);
+    frontier.push(allNodes[3]);
+    frontier.push(allNodes[3]);
+
+
+
+    //              (ind / sizeY, ind % sizeY)
+    Node* startCopy = allNodes[31];//this shld be coord (1,1), checked
+    Node*northCopy = getNodeFrom(startCopy,Action::north);  //(1,2) checked.
+    Node*eastCopy = getNodeFrom(startCopy,Action::east);  //(2,1) checked
+    Node*southCopy = getNodeFrom(startCopy,Action::south);  //(1,0)
+    Node*westCopy = getNodeFrom(startCopy,Action::west);  //(0,1) checked
+
+    Node*northeastCopy = getNodeFrom(startCopy,Action::northeast);  //(2,2) checked
+    Node*southeastCopy = getNodeFrom(startCopy,Action::southeast);  //(2,0) checked
+    LOG(southeastCopy->y);
 
 //handle all deletes, no memory leak.
     for(Node* each : allNodes){delete each;}
