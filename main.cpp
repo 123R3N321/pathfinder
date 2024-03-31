@@ -349,14 +349,12 @@ int main(){
 //    frontier.push(allNodes[3]);
 
 
-
     //              (ind / sizeY, ind % sizeY)
 //    Node* startCopy = allNodes[31];//this shld be coord (1,1), checked
 //    for(auto each : probe(startCopy)){
 //        LOG(each->x);
 //    }
 //    LOG(probe(startCopy).size());
-
 //    Node*northCopy = getNodeFrom(startCopy,Action::north);  //(1,2) checked.
 //    Node*eastCopy = getNodeFrom(startCopy,Action::east);  //(2,1) checked
 //    Node*southCopy = getNodeFrom(startCopy,Action::south);  //(1,0)
@@ -367,6 +365,17 @@ int main(){
 //    Node*southwestCopy = getNodeFrom(startCopy,Action::southwest);  //(0,0) checked
 //    Node*northwestCopy = getNodeFrom(startCopy,Action::northwest);  //(0,2) checked
 //    LOG(northwestCopy->y);
+
+
+Node*looper = allNodes[0];
+for(int i=0; i<10;i++){
+    LOG(looper->x);
+    LOG(looper->y);
+    LOG("");
+    looper = looper->parent;
+}
+
+
 
 //handle all deletes, no memory leak.
     for(Node* each : allNodes){delete each;}
