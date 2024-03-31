@@ -34,7 +34,7 @@ enum class Action;
 const size_t   xSize = 50,   //size of map, subject to change, also safer to have size_t
             ySize = 30;
 
-const float initX = 1.0f,   //where do we start
+const float initX = 0.0f,   //where do we start
             initY = 0.0f;
 
 const float endX = 3.0f,   //where to we end
@@ -64,14 +64,15 @@ struct Node{   //this is just more readable than pair,
             // btw we calculate heuristic on spot, we can change to init to save calculation time, as a design choice
     float x;
     float y;
+    float typeCost; //this is a cost dependent on the type: wall? road? difficult terrain?
     float cost; //essentially the type of the node, a wall or a tile
     Node* parent;  //know what action brought us here.
     float pathCost;
     bool reached;   //if reached, we will not explore it in AllNodes
     float heuristicVal;
 
-    Node(float x=0.0f, float y=0.0f, float cost = 0.0f) :
-    x(x), y(y), pathCost(0), reached(false){
+    Node(float x=0.0f, float y=0.0f, float typeCost = 0.0f) :
+    x(x), y(y), pathCost(0), typeCost(typeCost), reached(false){
         heuristicVal = heuristic(this);
         parent = nullptr;
     }    //default value 0,0
@@ -80,6 +81,7 @@ struct Node{   //this is just more readable than pair,
     Node(const Node& other){
         x = other.x;
         y = other.y;
+        typeCost = other.typeCost;
         cost = other.cost;
         parent = other.parent;
         pathCost = other.pathCost;
@@ -91,6 +93,7 @@ struct Node{   //this is just more readable than pair,
         if (this != &other) { // Check for self-assignment
             x = other.x;
             y = other.y;
+            typeCost = other.typeCost;
             cost = other.cost;
             parent = other.parent;
             pathCost = other.pathCost;
@@ -152,7 +155,7 @@ void initialize(){  //create all nodes on heap, they all start with zero cost
     }
 }
 
-float addCost(Action action){
+float actionCost(Action action){
     switch(action){
         case Action::north:
         case Action::east:
@@ -208,15 +211,15 @@ Node* getNodeFrom(Node* node, Action action){
             ptr = allNodes[refVal - ySize + 1];
             break;
     }
-    ptr->cost = addCost(action);    //so we don need to add one by one in the future
+    ptr->cost = ptr->typeCost + actionCost(action);    //so we don need to add one by one in the future
     return ptr;
 }
 
-void setNode(size_t x, size_t y, float cost=infinity){ //modify a node (in particular its cost) inside allNodes
+void setNode(size_t x, size_t y, float typeCost=infinity){ //modify a node (in particular its cost) inside allNodes
     if(allNodes.size()<=ySize * x + y){ //most likely forgor to initilize()
         LOG("the node exceeded the map."); return;
     }
-    allNodes[ySize * x + y]->cost = cost;
+    allNodes[ySize * x + y]->typeCost = typeCost;
 }
 
 /**
@@ -227,6 +230,11 @@ void setNode(size_t x, size_t y, float cost=infinity){ //modify a node (in parti
  * @return a vector with pointers to the neighboring nodes
  */
 std::vector<Node*> probe(Node* node){   //math correct
+    bool mapEdgeNorth = node->y<(ySize-1);
+    bool mapEdgeEast = node->x<(xSize-1);
+    bool mapEdgeSouth = node->y>0;
+    bool mapEdgeWest = node->x>0;
+
     bool north = false;
     bool east = false;
     bool south = false;
@@ -234,7 +242,7 @@ std::vector<Node*> probe(Node* node){   //math correct
 
     std::vector<Node*> lst;
     //check all 4 basic adjacent candidates
-    if(node->y<(ySize-1)){
+    if(mapEdgeNorth){
         if(!getNodeFrom(node, Action::north)->reached){
             lst.push_back(getNodeFrom(node, Action::north));
         }
@@ -242,44 +250,47 @@ std::vector<Node*> probe(Node* node){   //math correct
             north = true;
         }
     }
-    if(node->x<(xSize-1)){
+    if(mapEdgeEast){
         if(!getNodeFrom(node, Action::east)->reached){
             lst.push_back(getNodeFrom(node, Action::east));
-        }        if((getNodeFrom(node,Action::east)->cost)<criticalCritirion){
+        }
+        if((getNodeFrom(node,Action::east)->cost)<criticalCritirion){
             east = true;
         }
     }
-    if(node->y>0){
+    if(mapEdgeSouth){
         if(!getNodeFrom(node, Action::south)->reached){
             lst.push_back(getNodeFrom(node, Action::south));
-        }        if((getNodeFrom(node,Action::south)->cost)<criticalCritirion){
+        }
+        if((getNodeFrom(node,Action::south)->cost)<criticalCritirion){
             south = true;
         }
     }
-    if(node->x>0){
+    if(mapEdgeWest){
         if(!getNodeFrom(node, Action::west)->reached){
             lst.push_back(getNodeFrom(node, Action::west));
-        }        if((getNodeFrom(node,Action::west)->cost)<criticalCritirion){
+        }
+        if((getNodeFrom(node,Action::west)->cost)<criticalCritirion){
             west = true;
         }
     }
 
-    if(north && east){
+    if( (mapEdgeNorth) && (mapEdgeEast) && (north || east)){ //northeast
         if(!getNodeFrom(node, Action::northeast)->reached){
             lst.push_back(getNodeFrom(node, Action::northeast));
         }
     }
-    if(south && east){
+    if( (mapEdgeSouth) && (node->x<(xSize-1)) && (south || east)){
         if(!getNodeFrom(node, Action::southeast)->reached){
             lst.push_back(getNodeFrom(node, Action::southeast));
         }
     }
-    if(south && west){
+    if( (node->y>0) && (mapEdgeWest) && (south || west)){
         if(!getNodeFrom(node, Action::southwest)->reached){
             lst.push_back(getNodeFrom(node, Action::southwest));
         }
     }
-    if(north && west){
+    if( (node->y<(ySize-1)) && (node->x>0) && (north || west)){
         if(!getNodeFrom(node, Action::northwest)->reached){
             lst.push_back(getNodeFrom(node, Action::northwest));
         }
@@ -311,6 +322,11 @@ void aStar(std::vector<Node*> map){ //only need the map. we have global start an
 
         Node* current = frontier.top();   //create a local shallow copy of a pointer, very cheap
         frontier.pop(); //only kicked out from frontier, the node is still in our worldly worldly map lol
+        if(current->pathCost > criticalCritirion){
+            LOG("Bad Map");
+            break;
+        }
+
         if(current->isEnd()){
             return; //we do not need to do anything
         }
@@ -341,6 +357,12 @@ int main(){
 //    delete foo2;
 
     initialize();   //creates game map with all nodes
+
+    setNode(1,1);
+    setNode(1,2);
+    setNode(2,0);
+    setNode(1,3);
+    setNode(0,3);
 
     aStar(allNodes);    //assume frontier is clean
 
