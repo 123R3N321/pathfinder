@@ -18,6 +18,7 @@
 #include<cmath>
 #include<limits>    //may not need it
 #include<queue>
+#include <fstream>
 
 #define LOG(argument) std::cout << argument << '\n' //convenient debugg
 float infinity = std::numeric_limits<float>::infinity();
@@ -34,10 +35,10 @@ enum class Action;
 const size_t   xSize = 50,   //size of map, subject to change, also safer to have size_t
             ySize = 30;
 
-const float initX = 0.0f,   //where do we start
+float initX = 0.0f,   //where do we start
             initY = 0.0f;
 
-const float endX = 3.0f,   //where to we end
+float endX = 3.0f,   //where to we end
             endY = 3.0f;
 const size_t maxIteration = 9999;   //stop if we spend too long
 
@@ -60,6 +61,13 @@ enum class Action { //more readable
 };
 
 
+enum class blockType{
+    nop,
+    path,
+    start,
+    end,
+    wall
+};
 struct Node{   //this is just more readable than pair,
             // btw we calculate heuristic on spot, we can change to init to save calculation time, as a design choice
     float x;
@@ -70,6 +78,7 @@ struct Node{   //this is just more readable than pair,
     float pathCost;
     bool reached;   //if reached, we will not explore it in AllNodes
     float heuristicVal;
+    blockType block = blockType::nop; 
 
     Node(float x=0.0f, float y=0.0f, float typeCost = 0.0f) :
     x(x), y(y), pathCost(0), typeCost(typeCost), reached(false){
@@ -87,6 +96,7 @@ struct Node{   //this is just more readable than pair,
         pathCost = other.pathCost;
         reached = other.reached;
         heuristicVal = other.heuristicVal;
+        block = other.block;
     }
 
     Node& operator=(const Node& other){ //assignment
@@ -99,6 +109,7 @@ struct Node{   //this is just more readable than pair,
             pathCost = other.pathCost;
             reached = other.reached;
             heuristicVal = other.heuristicVal;
+            block = other.block;
         }
         return *this;
     }
@@ -215,11 +226,18 @@ Node* getNodeFrom(Node* node, Action action){
     return ptr;
 }
 
-void setNode(size_t x, size_t y, float typeCost=infinity){ //modify a node (in particular its cost) inside allNodes
+void setNode(size_t x, size_t y, blockType block, float typeCost=infinity){ //modify a node (in particular its cost) inside allNodes
     if(allNodes.size()<=ySize * x + y){ //most likely forgor to initilize()
         LOG("the node exceeded the map."); return;
     }
     allNodes[ySize * x + y]->typeCost = typeCost;
+    allNodes[ySize * x + y]->block = block;
+}
+
+//returns the node pointer based on given x,y coordinate
+
+Node* getNode(size_t x, size_t y){
+    return allNodes[ySize * x + y];
 }
 
 /**
@@ -313,7 +331,7 @@ std::vector<Node*> probe(Node* node){   //math correct
 
 
 
-void aStar(std::vector<Node*> map){ //only need the map. we have global start and end point
+int aStar(std::vector<Node*> map){ //only need the map. we have global start and end point
     map[ySize*initX + initY]->reached = true;   //prolly not necessary
     frontier.push(map[ySize*initX + initY]);    //the math approach gives constant access.
     size_t curIteration = 0;    //to be compared with maxIteration
@@ -339,6 +357,31 @@ void aStar(std::vector<Node*> map){ //only need the map. we have global start an
             }
         }
     }
+    return curIteration;
+}
+
+std::string matchInstruction(Node* cur, Node* prev){
+    std::string msg;
+
+//    if(prev->x == cur->x && prev->y == cur->y-1){msg="up";}
+    if(prev->y == cur->y && prev->x == cur->x-1){msg="right";}else
+    if(prev->x == cur->x && prev->y == cur->y+1){msg="down";}else
+    if(prev->y == cur->y && prev->x == cur->x+1){msg="left";}else
+    if(prev->y == cur->y-1 && prev->x == cur->x-1){msg="top-right";}else
+    if(prev->y == cur->y+1 && prev->x == cur->x-1){msg="bottom-right";}else
+    if(prev->y == cur->y+1 && prev->x == cur->x+1){msg="bottom-left";}else
+    if(prev->y == cur->y-1 && prev->x == cur->x+1){msg="top-left";}else{msg = "up";}
+
+    return msg;
+}
+
+void PrintInstructions(Node* iter){ //recursive implementation to get instruction
+    if(iter->isStart()){
+        return;
+    }
+    PrintInstructions(iter->parent);
+    LOG(matchInstruction(iter,iter->parent));
+
 }
 
 std::string matchInstruction(Node* cur, Node* prev){
@@ -382,26 +425,74 @@ int main(){
 
     initialize();   //creates game map with all nodes
 
-    setNode(1,1);
-    setNode(1,2);
-//    setNode(2,0);
-    setNode(1,3);
-    setNode(0,3);
+    std::ifstream file; 
+    file.open("Input1.txt");
+    file >> initX >> initY >> endX >> endY; //gets init xy and end xy positions
+    setNode(initX,initY,blockType::start); // sets the blocktype for both
+    setNode(endX, endY,  blockType::end);
+    int number;
+    int x = 0;
+    int y = 29;
+    //loops reads through the entire file and changes the node type to wall if it is
+    while(file >> number){
+        if(x == 50){ x = 0; y--;}
+        if(number == 1){setNode(x,y,blockType::wall);}
+        x++;
+        
+    }
 
-    aStar(allNodes);    //assume frontier is clean
-    PrintInstructions(allNodes[ySize * endX + endY]);
+   
+
+    int total_nodes = aStar(allNodes);    //assume frontier is clean
+
 
     /**
      * actual path test, failed
      */
-    Node* backtrack = allNodes[ySize * endX + endY];    //this is end node
+    std::string cost;
+
+    Node* backtrack = allNodes[ySize * endX + endY];
+        //this is end node
+    
+    backtrack = backtrack->parent; //skips end node
         while(! backtrack->isStart()){
-        LOG(backtrack->x<<" "<<backtrack->y);
+        // LOG(backtrack->x<<" "<<backtrack->y);
+        setNode(backtrack->x, backtrack->y,blockType::path);
         backtrack = backtrack->parent;
     }
-    LOG(backtrack->x<<" "<<backtrack->y);
 
+    // LOG(backtrack->x<<" "<<backtrack->y);
+    int count = 0;
+    std::ofstream outdata;
+    outdata.open("output.txt");
+    for(size_t i=ySize-1;i != -1; --i){
+        for(size_t j=0;j<xSize;++j){
+            Node* node = getNode(j,i);
+            if(node->block == blockType::nop){
+                number = 0;
+            }
+            else if(node->block == blockType::path){
+                number = 4;
+            }
+            else if(node->block == blockType::wall){
+                number = 1;
+            }
+            else if(node->block == blockType::start){
+                number = 2;
+            }
+            else if(node->block == blockType::end){
+                number = 5;
+            }
+            outdata << number << " ";
+        }
+        outdata << std::endl;
+    }
 
+       
+            
+        
+        
+    
 //for(Node* each : allNodes){
 //    if(each->reached){
 //        LOG(each->x<<" "<<each->y);
