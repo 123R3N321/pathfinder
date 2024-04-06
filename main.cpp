@@ -331,7 +331,7 @@ std::vector<Node*> probe(Node* node){   //math correct
 
 
 
-int aStar(std::vector<Node*> map){ //only need the map. we have global start and end point
+void aStar(std::vector<Node*> map){ //only need the map. we have global start and end point
     map[ySize*initX + initY]->reached = true;   //prolly not necessary
     frontier.push(map[ySize*initX + initY]);    //the math approach gives constant access.
     size_t curIteration = 0;    //to be compared with maxIteration
@@ -357,7 +357,6 @@ int aStar(std::vector<Node*> map){ //only need the map. we have global start and
             }
         }
     }
-    return curIteration;
 }
 
 std::string matchInstruction(Node* cur, Node* prev){
@@ -384,29 +383,9 @@ void PrintInstructions(Node* iter){ //recursive implementation to get instructio
 
 }
 
-std::string matchInstruction(Node* cur, Node* prev){
-    std::string msg;
 
-//    if(prev->x == cur->x && prev->y == cur->y-1){msg="up";}
-    if(prev->y == cur->y && prev->x == cur->x-1){msg="right";}else
-    if(prev->x == cur->x && prev->y == cur->y+1){msg="down";}else
-    if(prev->y == cur->y && prev->x == cur->x+1){msg="left";}else
-    if(prev->y == cur->y-1 && prev->x == cur->x-1){msg="top-right";}else
-    if(prev->y == cur->y+1 && prev->x == cur->x-1){msg="bottom-right";}else
-    if(prev->y == cur->y+1 && prev->x == cur->x+1){msg="bottom-left";}else
-    if(prev->y == cur->y-1 && prev->x == cur->x+1){msg="top-left";}else{msg = "up";}
 
-    return msg;
-}
 
-void PrintInstructions(Node* iter){ //recursive implementation to get instruction
-    if(iter->isStart()){
-        return;
-    }
-    PrintInstructions(iter->parent);
-    LOG(matchInstruction(iter,iter->parent));
-
-}
 
 int main(){
 //    foo* foo1 = new foo;
@@ -426,7 +405,14 @@ int main(){
     initialize();   //creates game map with all nodes
 
     std::ifstream file; 
-    file.open("Input1.txt");
+
+    file.open("Input2.txt");
+    if(file){
+        //std::cout << "hello";
+    }else{
+        std::cout <<"fail";
+    }
+    
     file >> initX >> initY >> endX >> endY; //gets init xy and end xy positions
     setNode(initX,initY,blockType::start); // sets the blocktype for both
     setNode(endX, endY,  blockType::end);
@@ -435,16 +421,19 @@ int main(){
     int y = 29;
     //loops reads through the entire file and changes the node type to wall if it is
     while(file >> number){
-        if(x == 50){ x = 0; y--;}
-        if(number == 1){setNode(x,y,blockType::wall);}
+        if(x == 50){ x = 0; y--; std::cout << std::endl;}
+        if(number == 1){setNode(x,y,blockType::wall) ;}
         x++;
-        
+        std::cout << number << " ";
     }
+    file.close();
+    std::cout << std::endl;
 
    
 
-    int total_nodes = aStar(allNodes);    //assume frontier is clean
-
+    aStar(allNodes);    //assume frontier is clean
+    std::ofstream outdata;
+    outdata.open("output1.txt");
 
     /**
      * actual path test, failed
@@ -453,18 +442,37 @@ int main(){
 
     Node* backtrack = allNodes[ySize * endX + endY];
         //this is end node
-    
+    std::vector<Node*> pathNodes;
     backtrack = backtrack->parent; //skips end node
         while(! backtrack->isStart()){
         // LOG(backtrack->x<<" "<<backtrack->y);
         setNode(backtrack->x, backtrack->y,blockType::path);
+        pathNodes.push_back(backtrack);
         backtrack = backtrack->parent;
     }
+    
+    for(size_t i = pathNodes.size()-1; i != -1; --i){
+        Node* node= pathNodes[i];
+        std::string action = matchInstruction(node, node->parent);
+        if(action == "right"){outdata << 0 << " ";}
+        else if(action == "top-right"){outdata << 1 << " ";}
+        else if(action == "up"){outdata << 2 << " ";}
+        else if(action == "top-left"){outdata << 3 << " ";}
+        else if(action == "left"){outdata << 4 << " ";}
+        else if(action == "bottom-left"){outdata << 5 << " ";}
+        else if(action == "bottom"){outdata << 6 << " ";}
+        else if(action == "bottom-right"){outdata << 7<< " ";}
+    }
+    outdata << std::endl; 
+    for(size_t i = 0; i != pathNodes.size();++i){
+        Node* node= pathNodes[i];
+        outdata << node->heuristicVal+ node->pathCost << " ";
+    }
+    outdata << std::endl; 
 
     // LOG(backtrack->x<<" "<<backtrack->y);
     int count = 0;
-    std::ofstream outdata;
-    outdata.open("output.txt");
+    
     for(size_t i=ySize-1;i != -1; --i){
         for(size_t j=0;j<xSize;++j){
             Node* node = getNode(j,i);
@@ -484,10 +492,12 @@ int main(){
                 number = 5;
             }
             outdata << number << " ";
+            std::cout << number << " ";
         }
+        std::cout << std::endl;
         outdata << std::endl;
     }
-
+    outdata.close();
        
             
         
