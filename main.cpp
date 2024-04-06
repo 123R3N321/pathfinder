@@ -32,6 +32,7 @@ struct Node;
 float heuristic(const Node* curPos);
 enum class Action;
 
+int total_nodes = 0;
 const size_t   xSize = 50,   //size of map, subject to change, also safer to have size_t
             ySize = 30;
 
@@ -316,6 +317,7 @@ std::vector<Node*> probe(Node* node){   //math correct
 
     for(Node* child : lst){
         if( ! child->reached){
+            
             child->parent = node;    //first time seeing this child, adopt by parent
             child->pathCost = node->pathCost + child->cost;   //first time reaching it, update pathCost
         }else{  //already reached, potentially choose a better parent
@@ -388,32 +390,14 @@ void PrintInstructions(Node* iter){ //recursive implementation to get instructio
 
 
 int main(){
-//    foo* foo1 = new foo;
-//    foo* foo2 = new foo;
-//    foo1->val +=1.0f;
 
-//LOG(foo2.val);
+    
 
-//    std::priority_queue<foo*, std::vector<foo*>, Functor> fooheap;
-//    fooheap.push(foo2);
-//
-//    fooheap.push(foo1);
-//    LOG(fooheap.top()->val);
-//    delete foo1;
-//    delete foo2;
-
-    initialize();   //creates game map with all nodes
 
     std::ifstream file; 
-
-    file.open("Input2.txt");
-    if(file){
-        //std::cout << "hello";
-    }else{
-        std::cout <<"fail";
-    }
-    
+    file.open("input1.txt");
     file >> initX >> initY >> endX >> endY; //gets init xy and end xy positions
+    initialize();   //creates game map with all nodes
     setNode(initX,initY,blockType::start); // sets the blocktype for both
     setNode(endX, endY,  blockType::end);
     int number;
@@ -421,37 +405,65 @@ int main(){
     int y = 29;
     //loops reads through the entire file and changes the node type to wall if it is
     while(file >> number){
-        if(x == 50){ x = 0; y--; std::cout << std::endl;}
+        if(x == 50){ x = 0; y--; }
         if(number == 1){setNode(x,y,blockType::wall) ;}
         x++;
-        std::cout << number << " ";
+       // std::cout << number << " ";
     }
     file.close();
-    std::cout << std::endl;
+    //std::cout << std::endl;
 
    
 
     aStar(allNodes);    //assume frontier is clean
     std::ofstream outdata;
-    outdata.open("output1.txt");
+    outdata.open("output.txt");
 
     /**
      * actual path test, failed
      */
-    std::string cost;
+
 
     Node* backtrack = allNodes[ySize * endX + endY];
         //this is end node
-    std::vector<Node*> pathNodes;
+  
+    std::vector<Node*> pathNodes; // vector to keep track of pathNode
+    pathNodes.push_back(backtrack);
     backtrack = backtrack->parent; //skips end node
-        while(! backtrack->isStart()){
+    
+
+    while(! backtrack->isStart()){
         // LOG(backtrack->x<<" "<<backtrack->y);
-        setNode(backtrack->x, backtrack->y,blockType::path);
+        setNode(backtrack->x, backtrack->y,blockType::path); //sets the block type of walls to path
         pathNodes.push_back(backtrack);
+        std::cout << "x " << backtrack->x <<  " ";
+        std::cout << "y " << backtrack->y <<  " ";
+        std::cout << "h(n) " << backtrack->heuristicVal << " ";
+        std::cout << "g(n) " << backtrack->pathCost << " ";
+        std::cout << "f(n) " << backtrack->heuristicVal + backtrack->pathCost<< std::endl;
+         
+
         backtrack = backtrack->parent;
     }
+
     
-    for(size_t i = pathNodes.size()-1; i != -1; --i){
+    pathNodes.push_back(backtrack);
+    // backtrack = getNode(8,10);
+    // std::cout << "x " << backtrack->x <<  " ";
+    //     std::cout << "y " << backtrack->y <<  " ";
+    //     std::cout << "h(n) " << backtrack->heuristicVal << " ";
+    //     std::cout << "g(n) " << backtrack->pathCost << " ";
+    //     std::cout << "f(n) " << backtrack->heuristicVal + backtrack->pathCost<< std::endl;
+    // backtrack = getNode(8,10);
+    // std::cout << "x " << backtrack->x <<  " ";
+    //     std::cout << "y " << backtrack->y <<  " ";
+    //     std::cout << "h(n) " << backtrack->heuristicVal << " ";
+    //     std::cout << "g(n) " << backtrack->pathCost << " ";
+    //     std::cout << "f(n) " << backtrack->heuristicVal + backtrack->pathCost<< std::endl;
+    // outdata << pathNodes.size()-1 << std::endl;
+    // outdata << total_nodes << std:: endl;
+    // prints out the path of the nodes
+    for(size_t i = pathNodes.size()-2; i != -1; --i){
         Node* node= pathNodes[i];
         std::string action = matchInstruction(node, node->parent);
         if(action == "right"){outdata << 0 << " ";}
@@ -463,16 +475,18 @@ int main(){
         else if(action == "bottom"){outdata << 6 << " ";}
         else if(action == "bottom-right"){outdata << 7<< " ";}
     }
-    outdata << std::endl; 
-    for(size_t i = 0; i != pathNodes.size();++i){
+    outdata << std::endl;
+
+    //prints out the f(n) 
+    for(size_t i = pathNodes.size()-1; i != -1; --i){
         Node* node= pathNodes[i];
         outdata << node->heuristicVal+ node->pathCost << " ";
     }
+
     outdata << std::endl; 
 
     // LOG(backtrack->x<<" "<<backtrack->y);
-    int count = 0;
-    
+    //reprints the whole map with the path 
     for(size_t i=ySize-1;i != -1; --i){
         for(size_t j=0;j<xSize;++j){
             Node* node = getNode(j,i);
@@ -492,9 +506,9 @@ int main(){
                 number = 5;
             }
             outdata << number << " ";
-            std::cout << number << " ";
+            //std::cout << number << " ";
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
         outdata << std::endl;
     }
     outdata.close();
@@ -503,61 +517,6 @@ int main(){
         
         
     
-//for(Node* each : allNodes){
-//    if(each->reached){
-//        LOG(each->x<<" "<<each->y);
-//    }
-//}
-
-
-//    frontier.push(allNodes[0]);
-//    frontier.push(allNodes[1]);
-//    frontier.push(allNodes[2]);
-//
-//    frontier.push(allNodes[31]);
-//    frontier.push(allNodes[3]);
-//    frontier.push(allNodes[3]);
-//
-//    frontier.push(allNodes[3]);
-//    frontier.push(allNodes[3]);
-//    frontier.push(allNodes[3]);
-//LOG(frontier.top()->x<<" "<<frontier.top()->y);
-
-    //              (ind / sizeY, ind % sizeY)
-
-/**
- * probe test, checked
- */
-
-//    Node* startCopy = allNodes[31];//this shld be coord (1,1), checked
-//    for(auto each : probe(startCopy)){
-//        LOG(each->x <<  " " << each->y );
-//    }
-
-/**
- * linAlg test, checked
- */
-//    LOG(probe(startCopy).size());
-//    Node*northCopy = getNodeFrom(startCopy,Action::north);  //(1,2) checked.
-//    Node*eastCopy = getNodeFrom(startCopy,Action::east);  //(2,1) checked
-//    Node*southCopy = getNodeFrom(startCopy,Action::south);  //(1,0)
-//    Node*westCopy = getNodeFrom(startCopy,Action::west);  //(0,1) checked
-//
-//    Node*northeastCopy = getNodeFrom(startCopy,Action::northeast);  //(2,2) checked
-//    Node*southeastCopy = getNodeFrom(startCopy,Action::southeast);  //(2,0) checked
-//    Node*southwestCopy = getNodeFrom(startCopy,Action::southwest);  //(0,0) checked
-//    Node*northwestCopy = getNodeFrom(startCopy,Action::northwest);  //(0,2) checked
-//    LOG(northwestCopy->y);
-
-
-//Node*looper = allNodes[0];
-//for(int i=0; i<33;i++){
-////    LOG(looper->x);
-//    LOG(allNodes[i]->heuristicVal);
-//    LOG("");
-////    looper = looper->parent;
-//}
-
 
 
 //handle all deletes, no memory leak.
