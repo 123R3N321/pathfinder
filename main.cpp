@@ -36,11 +36,11 @@ int total_nodes = 0;        //this is total number
 const size_t   xSize = 50,   //size of map, subject to change, also safer to have size_t
             ySize = 30;
 
-float initX = 0.0f,   //where do we start
-            initY = 0.0f;
+float initX = 3.0f,   //where do we start
+            initY = 2.0f;
 
-float endX = 3.0f,   //where to we end
-            endY = 3.0f;
+float endX = 1.0f,   //where to we end
+            endY = 1.0f;
 const size_t maxIteration = 9999;   //stop if we spend too long
 
 std::vector<Node*> allNodes;    //this is a global var, all its elements on heap, my implementation makes access faster than RBtree map.
@@ -262,7 +262,7 @@ std::vector<Node*> probe(Node* node){   //math correct
     std::vector<Node*> lst;
     //check all 4 basic adjacent candidates
     if(mapEdgeNorth){
-        if(!getNodeFrom(node, Action::north)->reached){
+        if(  1||  !getNodeFrom(node, Action::north)->reached){
             lst.push_back(getNodeFrom(node, Action::north));
         }
         if((getNodeFrom(node,Action::north)->cost)<criticalCritirion){
@@ -270,7 +270,7 @@ std::vector<Node*> probe(Node* node){   //math correct
         }
     }
     if(mapEdgeEast){
-        if(!getNodeFrom(node, Action::east)->reached){
+        if(  1||  !getNodeFrom(node, Action::east)->reached){
             lst.push_back(getNodeFrom(node, Action::east));
         }
         if((getNodeFrom(node,Action::east)->cost)<criticalCritirion){
@@ -278,7 +278,7 @@ std::vector<Node*> probe(Node* node){   //math correct
         }
     }
     if(mapEdgeSouth){
-        if(!getNodeFrom(node, Action::south)->reached){
+        if(  1||  !getNodeFrom(node, Action::south)->reached){
             lst.push_back(getNodeFrom(node, Action::south));
         }
         if((getNodeFrom(node,Action::south)->cost)<criticalCritirion){
@@ -286,7 +286,7 @@ std::vector<Node*> probe(Node* node){   //math correct
         }
     }
     if(mapEdgeWest){
-        if(!getNodeFrom(node, Action::west)->reached){
+        if(  1||  !getNodeFrom(node, Action::west)->reached){
             lst.push_back(getNodeFrom(node, Action::west));
         }
         if((getNodeFrom(node,Action::west)->cost)<criticalCritirion){
@@ -295,34 +295,34 @@ std::vector<Node*> probe(Node* node){   //math correct
     }
 
     if( (mapEdgeNorth) && (mapEdgeEast) && (north || east)){ //northeast
-        if(!getNodeFrom(node, Action::northeast)->reached){
+        if(  1||  !getNodeFrom(node, Action::northeast)->reached){
             lst.push_back(getNodeFrom(node, Action::northeast));
         }
     }
-    if( (mapEdgeSouth) && (node->x<(xSize-1)) && (south || east)){
-        if(!getNodeFrom(node, Action::southeast)->reached){
+    if( (mapEdgeSouth) && (mapEdgeEast) && (south || east)){
+        if(  1||  !getNodeFrom(node, Action::southeast)->reached){
             lst.push_back(getNodeFrom(node, Action::southeast));
         }
     }
-    if( (node->y>0) && (mapEdgeWest) && (south || west)){
-        if(!getNodeFrom(node, Action::southwest)->reached){
+    if( (mapEdgeSouth) && (mapEdgeWest) && (south || west)){
+        if(  1||  !getNodeFrom(node, Action::southwest)->reached){
             lst.push_back(getNodeFrom(node, Action::southwest));
         }
     }
-    if( (node->y<(ySize-1)) && (node->x>0) && (north || west)){
-        if(!getNodeFrom(node, Action::northwest)->reached){
+    if( (mapEdgeNorth) && (mapEdgeWest) && (north || west)){
+        if(  1||  !getNodeFrom(node, Action::northwest)->reached){
             lst.push_back(getNodeFrom(node, Action::northwest));
         }
     }
 
     for(Node* child : lst){
         if( ! child->reached){
-            
-            child->parent = node;    //first time seeing this child, adopt by parent
+            LOG("\n"<<child->x<<" "<<child->y<<"\n");
+//            child->parent = node;    //first time seeing this child, adopt by parent
             child->pathCost = node->pathCost + child->cost;   //first time reaching it, update pathCost
         }else{  //already reached, potentially choose a better parent
-            if(child->pathCost < node->pathCost + child->cost){
-                child->parent = node;   //found a better parent
+            if(child->pathCost > node->pathCost + child->cost){
+//                child->parent = node;   //found a better parent
                 child->pathCost = node->pathCost + child->cost; //update this better cost
                 child->reached = false; //fake that we did not have a parent before so that we get a better deal
                 total_nodes --; //step back cuz we gonna bump in astar func
@@ -387,21 +387,19 @@ void PrintInstructions(Node* iter){ //recursive implementation to get instructio
 
 }
 
-
-
-
-
 int main(){
-
-    
 
 
     std::ifstream file; 
-    file.open("input1.txt");
+    file.open("Input1.txt");
     file >> initX >> initY >> endX >> endY; //gets init xy and end xy positions
+
+    LOG("the end is: "<<endX<<" "<<endY<<"\n");
+
+
     initialize();   //creates game map with all nodes
-    setNode(initX,initY,blockType::start); // sets the blocktype for both
-    setNode(endX, endY,  blockType::end);
+    setNode(initX,initY,blockType::start, 0); // sets the blocktype for both
+    setNode(endX, endY,  blockType::end,0);
     int number;
     int x = 0;
     int y = 29;
@@ -418,8 +416,14 @@ int main(){
    
 
     aStar(allNodes);    //assume frontier is clean
-    std::ofstream outdata;
-    outdata.open("output.txt");
+
+    LOG("Generated nodes cout: "<<total_nodes<<"\n");
+
+    std::ofstream outdata("output.txt");
+    if (!outdata) {
+        std::cerr << "Error: Could not create/open the file 'output.txt'\n";
+        return 1; // Return an error code
+    }
 
     /**
      * actual path test, failed
@@ -517,7 +521,8 @@ int main(){
        
             
         
-        
+        LOG("the end is: "<<endX<<" "<<endY<<"\n");
+        std::cout<<endX<<std::endl;
     
 
 
