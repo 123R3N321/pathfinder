@@ -22,7 +22,7 @@
 
 #define LOG(argument) std::cout << argument << '\n' //convenient debugg
 float infinity = std::numeric_limits<float>::infinity();
-float criticalCritirion = 999.0f;
+float criticalCritirion = 9999.0f;
 
 /*
  * design decision: (0,0) at bottom left
