@@ -32,7 +32,7 @@ struct Node;
 float heuristic(const Node* curPos);
 enum class Action;
 
-int total_nodes = 0;
+int total_nodes = 0;        //this is total number
 const size_t   xSize = 50,   //size of map, subject to change, also safer to have size_t
             ySize = 30;
 
@@ -325,6 +325,7 @@ std::vector<Node*> probe(Node* node){   //math correct
                 child->parent = node;   //found a better parent
                 child->pathCost = node->pathCost + child->cost; //update this better cost
                 child->reached = false; //fake that we did not have a parent before so that we get a better deal
+                total_nodes --; //step back cuz we gonna bump in astar func
             }
         }
     }
@@ -352,10 +353,11 @@ void aStar(std::vector<Node*> map){ //only need the map. we have global start an
         }
         std::vector<Node*>cand = probe(current);
         for (Node* child : cand){
-            if (! child->reached){
+            if (! child->reached){      //this is essentially compound boolean, both unreached and better cost
                 child->parent = current;
                 child->reached = true;
                 frontier.push(child);
+                total_nodes ++; //bump forward
             }
         }
     }
