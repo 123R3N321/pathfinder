@@ -262,57 +262,41 @@ std::vector<Node*> probe(Node* node){   //math correct
     std::vector<Node*> lst;
     //check all 4 basic adjacent candidates
     if(mapEdgeNorth){
-        if(  1||  !getNodeFrom(node, Action::north)->reached){
             lst.push_back(getNodeFrom(node, Action::north));
-        }
         if((getNodeFrom(node,Action::north)->cost)<criticalCritirion){
             north = true;
         }
     }
     if(mapEdgeEast){
-        if(  1||  !getNodeFrom(node, Action::east)->reached){
             lst.push_back(getNodeFrom(node, Action::east));
-        }
         if((getNodeFrom(node,Action::east)->cost)<criticalCritirion){
             east = true;
         }
     }
     if(mapEdgeSouth){
-        if(  1||  !getNodeFrom(node, Action::south)->reached){
             lst.push_back(getNodeFrom(node, Action::south));
-        }
         if((getNodeFrom(node,Action::south)->cost)<criticalCritirion){
             south = true;
         }
     }
     if(mapEdgeWest){
-        if(  1||  !getNodeFrom(node, Action::west)->reached){
             lst.push_back(getNodeFrom(node, Action::west));
-        }
         if((getNodeFrom(node,Action::west)->cost)<criticalCritirion){
             west = true;
         }
     }
 
     if( (mapEdgeNorth) && (mapEdgeEast) && (north || east)){ //northeast
-        if(  1||  !getNodeFrom(node, Action::northeast)->reached){
             lst.push_back(getNodeFrom(node, Action::northeast));
-        }
     }
     if( (mapEdgeSouth) && (mapEdgeEast) && (south || east)){
-        if(  1||  !getNodeFrom(node, Action::southeast)->reached){
             lst.push_back(getNodeFrom(node, Action::southeast));
-        }
     }
     if( (mapEdgeSouth) && (mapEdgeWest) && (south || west)){
-        if(  1||  !getNodeFrom(node, Action::southwest)->reached){
             lst.push_back(getNodeFrom(node, Action::southwest));
-        }
     }
     if( (mapEdgeNorth) && (mapEdgeWest) && (north || west)){
-        if(  1||  !getNodeFrom(node, Action::northwest)->reached){
             lst.push_back(getNodeFrom(node, Action::northwest));
-        }
     }
 
     for(Node* child : lst){
@@ -406,7 +390,7 @@ int main(){
     //loops reads through the entire file and changes the node type to wall if it is
     while(file >> number){
         if(x == 50){ x = 0; y--; }
-        if(number == 1){setNode(x,y,blockType::wall) ;}
+//        if(number == 1){setNode(x,y,blockType::wall) ;}
         x++;
        // std::cout << number << " ";
     }
